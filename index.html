@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Transmetro y Municipalidades Aledañas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; padding: 0; background-color: #f0f3f8; color: #333; }
+        header { background: linear-gradient(135deg, #022047, #0052a5); color: white; padding: 18px 40px; }
+        header h1 { margin: 0; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        header p { margin: 4px 0 0 0; opacity: 0.85; font-size: 13px; }
+        .nav-tabs { background-color: #011733; display: flex; flex-wrap: wrap; padding: 0 35px; gap: 4px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        .tab-btn { background: none; border: none; color: #b0c4de; padding: 12px 18px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; border-radius: 6px 6px 0 0; }
+        .tab-btn:hover { color: white; background-color: rgba(255,255,255,0.08); }
+        .tab-btn.active { color: #022047; background-color: #ffffff; }
+        .container { max-width: 1250px; margin: 25px auto; padding: 0 20px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 22px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .card-title { font-size: 18px; font-weight: 700; color: #032c58; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 12.5px; font-weight: 600; color: #495057; }
+        .form-group input, .form-group select { padding: 9px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13.5px; width: 100%; outline: none; }
+        .filter-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ced4da; font-size: 13.5px; outline: none; }
+        .btn { border: none; padding: 10px 20px; font-size: 13.5px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; padding: 8px 14px; font-size: 13px; }
+        .btn-danger { background-color: #dc3545; color: white; padding: 6px 12px; font-size: 12px; border-radius: 5px; }
+        .btn-warning { background-color: #ffc107; color: #212529; padding: 6px 12px; font-size: 12px; border-radius: 5px; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 8px; margin-top: 10px; }
+        th, td { padding: 12px 18px; text-align: left; font-size: 13.5px; }
+        th { background-color: #032c58; color: white; font-weight: 600; border: none; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #f1f3f5; }
+        td { border-bottom: 1px solid #e9ecef; }
+        .badge { color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; text-align: center; }
+        .badge-linea { background-color: #007bff; }
+        .badge-op { background-color: #28a745; }
+        .badge-mant { background-color: #ffc107; color: #212529; }
+        .badge-susp { background-color: #dc3545; }
+        .badge-cong { background-color: #fd7e14; }
+        .timer-box { font-family: monospace; font-size: 15px; font-weight: bold; color: #d9534f; background: #fff3f3; padding: 4px 10px; border-radius: 6px; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1> Sistema de Control de Transmetro y Municipalidades Aledañas</h1>
+        <p>sistema de contro Municipalidad de Guatemala </p>
+    </header>
+
+    <nav class="nav-tabs">
+        <button class="tab-btn active" onclick="verModulo('modulo-estaciones', this)">Estaciones y Rutas</button>
+        <button class="tab-btn" onclick="verModulo('modulo-estado-linea', this)">Líneas y Cronómetro GPS</button>
+        <button class="tab-btn" onclick="verModulo('modulo-muni', this)">Municipalidades</button>
+        <button class="tab-btn" onclick="verModulo('modulo-accesos', this)">Accesos y Guardias</button>
+        <button class="tab-btn" onclick="verModulo('modulo-buses', this)">Buses, Parqueos y Regla N-2N</button>
+        <button class="tab-btn" onclick="verModulo('modulo-personal', this)">Pilotos</button>
+        <button class="tab-btn" onclick="verModulo('modulo-alertas', this)">Control de Aforo y Refuerzos</button>
+        <button class="tab-btn" onclick="verModulo('modulo-red', this)">Arquitectura de Red (PC Estación)</button>
+        <button class="tab-btn" onclick="verModulo('modulo-reportes', this)">Reportes</button>
+    </nav>
+
+    <div class="container">
+        
+        <!-- 1. ESTACIONES -->
+        <div id="modulo-estaciones" class="tab-content active">
+            <div class="card">
+                <h2 class="card-title" style="color: #6f42c1;"> Registrar Nueva Estación </h2>
+                <form id="form-estacion" class="form-grid" style="margin-top: 15px;" onsubmit="registrarEstacion(event)">
+                    <div class="form-group">
+                        <label>ID Estación</label>
+                        <input type="number" id="id_estacion" required placeholder="Ej. 1219">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Estación</label>
+                        <input type="text" id="nombre" required placeholder="Ej. Estación Central">
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección / Ubicación</label>
+                        <input type="text" id="direccion" placeholder="Ej. Calzada Aguilar Batres, zona 12">
+                    </div>
+                    <div class="form-group">
+                        <label>Operador de PC </label>
+                        <input type="text" id="operador_nombre" placeholder="Ej. Roberto Morales">
+                    </div>
+                    <div class="form-group">
+                        <label>Parqueo Asignado </label>
+                        <select id="select-parqueo-estacion">
+                            <option value="">-- Sin Parqueo --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Línea Principal</label>
+                        <select id="select-linea-form" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Municipalidad</label>
+                        <select id="select-muni-form" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar en Oracle</button>
+                </form>
+            </div>
+
+           
+            <div class="card">
+                <h2 class="card-title" style="color: #0f0f0f;"> Vincular Estación Existente a otra Línea </h2>
+                <form class="form-grid" style="margin-top:15px;" onsubmit="asociarEstacionALinea(event)">
+                    <div class="form-group">
+                        <label>Seleccionar Estación</label>
+                        <select id="assoc_estacion" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Seleccionar Línea Adicional</label>
+                        <select id="assoc_linea" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Vincular a Línea</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Estaciones Registradas</h2>
+                    <div class="filter-group">
+                        <input type="text" id="buscar-estacion" class="filter-input" placeholder="Buscar por nombre..." onkeyup="if(event.key==='Enter') cargarEstaciones()">
+                        <label style="font-weight: 600; font-size: 13.5px;">Filtrar por Línea:</label>
+                        <select id="select-filtro-linea" class="filter-input">
+                            <option value="todas">-- Todas las Líneas --</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="cargarEstaciones()">🔍 Filtrar</button>
+                        <button class="btn btn-secondary" onclick="limpiarFiltros()">🔄 Limpiar</button>
+                        <button class="btn btn-success" onclick="exportarTablaEstacionesPDF()">📥 PDF Estaciones</button>
+                    </div>
+                </div>
+
+                <div id="area-impresion-estaciones">
+                    <table id="tabla-estaciones">
+                        <thead>
+                            <tr>
+                                <th>Orden Visita</th>
+                                <th>Estación</th>
+                                <th>Línea</th>
+                                <th>Parqueo Base</th>
+                                <th>Dist. Sig. Estación</th>
+                                <th>Operador PC</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="7" style="text-align: center;">Cargando estaciones desde Oracle...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. LÍNEAS, DISTANCIAS Y CRONÓMETRO GPS -->
+        <div id="modulo-estado-linea" class="tab-content">
+            <div class="card">
+                <h2 class="card-title" style="color: #032c58;" Control de Estado y Distancia Total por Línea </h2>
+                <form class="form-grid" style="margin-bottom: 25px;" onsubmit="actualizarEstadoLinea(event)">
+                    <div class="form-group">
+                        <label>Seleccionar Línea</label>
+                        <select id="select-linea-estado" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nuevo Estado Operativo</label>
+                        <select id="nuevo-estado" required>
+                            <option value="Operativa">🟢 Operativa (Normal)</option>
+                            <option value="En Mantenimiento">🟡 En Mantenimiento</option>
+                            <option value="Alta Congestión">🟠 Alta Congestión / Retraso</option>
+                            <option value="Suspendida">🔴 Servicio Suspendido</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Actualizar Estado</button>
+                </form>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Línea</th>
+                            <th>Nombre de Línea</th>
+                            <th>Municipalidad</th>
+                            <th>Estaciones (N)</th>
+                            <th>Distancia Total Recorrido</th>
+                            <th>Estado Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-lineas-estado">
+                        <tr><td colspan="6" style="text-align: center;">Cargando líneas...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title" style="color: #007bff;">⏱️ Cronómetro GPS en Tiempo Real de Llegada a Estaciones</h2>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label style="font-weight:600;">Ver Monitor GPS por Línea:</label>
+                    <select id="select-gps-linea" class="filter-input" onchange="cargarMonitorGPS()">
+                        <option value="todas">-- Todas las Líneas --</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Estación</th>
+                            <th>Línea</th>
+                            <th>Próximo Bus (GPS)</th>
+                            <th>Carga Unid.</th>
+                            <th>Cronómetro Tiempo Restante</th>
+                            <th>Estado de Espera</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-gps-estaciones">
+                        <tr><td colspan="7" style="text-align:center;">Cargando cronómetros GPS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. MUNICIPALIDADES -->
+        <div id="modulo-muni" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">🏛️ Registro de Municipalidades </h2>
+                <form class="form-grid" style="margin-top:15px; margin-bottom: 25px;" onsubmit="registrarMunicipalidad(event)">
+                    <div class="form-group">
+                        <label>ID Municipalidad</label>
+                        <input type="number" id="muni_id" required placeholder="Ej. 4">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Municipalidad</label>
+                        <input type="text" id="muni_nombre" required placeholder="Ej. Municipalidad de Sacatepéquez">
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar en Oracle</button>
+                </form>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Municipalidad</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-municipalidades">
+                        <tr><td colspan="2" style="text-align:center;">Cargando municipalidades...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. ACCESOS Y GUARDIAS POR ACCESO (Req. 3, 8 y 10) -->
+        <div id="modulo-accesos" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">🔑 Accesos y Guardias de Seguridad (Mínimo 1 por Acceso)</h2>
+                <form class="form-grid" style="margin-top:15px; margin-bottom:20px;" onsubmit="registrarAcceso(event)">
+                    <div class="form-group">
+                        <label>ID Acceso</label>
+                        <input type="number" id="acc_id" required placeholder="Ej. 501">
+                    </div>
+                    <div class="form-group">
+                        <label>Estación Pertenece</label>
+                        <select id="acc_estacion" required>
+                            <option value="" disabled selected>-- Cargando estaciones... --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción del Acceso</label>
+                        <input type="text" id="acc_desc" placeholder="Ej. Acceso Norte - Rampa Peatonal">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Guardia Obligatorio</label>
+                        <input type="text" id="acc_guardia" required placeholder="Ej. Carlos López">
+                    </div>
+                    <button type="submit" class="btn btn-success">Asignar Guardia y Acceso</button>
+                </form>
+
+                <div style="margin-top: 15px;">
+                    <label style="font-weight:600;">🔍 Consultar todos los accesos de una Línea :</label>
+                    <select id="select-linea-accesos" class="filter-input" onchange="consultarAccesosPorLinea()">
+                        <option value="">-- Selecciona Línea --</option>
+                    </select>
+                    <table style="margin-top:10px;">
+                        <thead>
+                            <tr>
+                                <th>ID Acceso</th>
+                                <th>Estación</th>
+                                <th>Descripción Acceso</th>
+                                <th>Guardia Asignado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-accesos-linea">
+                            <tr><td colspan="4" style="text-align:center;">Selecciona una línea para listar sus accesos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. BUSES, PARQUEOS Y CUMPLIMIENTO N-2N  -->
+        <div id="modulo-buses" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">🚌 Flota de Buses, Parqueos y Regla</h2>
+                <form class="form-grid" style="margin-top:15px; margin-bottom: 25px;" onsubmit="registrarBus(event)">
+                    <div class="form-group">
+                        <label>ID Bus</label>
+                        <input type="number" id="bus_id" required placeholder="Ej. 104">
+                    </div>
+                    <div class="form-group">
+                        <label>Placa / Ficha</label>
+                        <input type="text" id="bus_placa" required placeholder="Ej. TR-1004">
+                    </div>
+                    <div class="form-group">
+                        <label>Capacidad Máxima</label>
+                        <input type="number" id="bus_cap" required placeholder="Ej. 160">
+                    </div>
+                    <div class="form-group">
+                        <label>Carga Actual (%)</label>
+                        <input type="number" id="bus_carga" required placeholder="Ej. 20 (Para probar espera de 5 min)">
+                    </div>
+                    <div class="form-group">
+                        <label>Parqueo Base Asignado </label>
+                        <select id="bus_parqueo" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Línea Asignada </label>
+                        <select id="bus_linea"></select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar Bus</button>
+                </form>
+
+                <div style="background: #eef5ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="color: #032c58; font-size: 15px; margin: 0 0 10px 0;"> Reasignar Parqueo o Línea a Bus </h3>
+                    <form class="form-grid" onsubmit="reasignarBusSubmit(event)">
+                        <div class="form-group">
+                            <label>Seleccionar Bus</label>
+                            <select id="edit_bus_id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nuevo Parqueo Obligatorio</label>
+                            <select id="edit_bus_parqueo" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nueva Línea (Opcional)</label>
+                            <select id="edit_bus_linea"></select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Aplicar Reasignación</button>
+                    </form>
+                </div>
+
+                <h3 style="color: #032c58; font-size: 16px; margin-bottom: 10px;">Regla Operativa de Buses por Línea </h3>
+                <table style="margin-bottom:20px;">
+                    <thead>
+                        <tr>
+                            <th>Línea</th>
+                            <th>Total Estaciones ($N$)</th>
+                            <th>Mínimo Requerido ($N$)</th>
+                            <th>Máximo Permitido ($2N$)</th>
+                            <th>Buses Asignados</th>
+                            <th>Estado Regla</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-regla-buses">
+                        <tr><td colspan="6" style="text-align:center;">Cargando verificación de flota...</td></tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #032c58; font-size: 16px; margin-bottom: 10px;">Inventario Completo de Buses</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Bus</th>
+                            <th>Ficha / Placa</th>
+                            <th>Capacidad</th>
+                            <th>Carga Pasajeros</th>
+                            <th>Parqueo Asignado</th>
+                            <th>Línea Actual</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-buses">
+                        <tr><td colspan="7" style="text-align:center;">Cargando inventario de buses...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. PILOTOS (Req. 9) -->
+        <div id="modulo-personal" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">👨‍✈️ Directorio de Pilotos (Historial, Residencia y Contacto)</h2>
+                <form class="form-grid" style="margin-top:15px; margin-bottom: 25px;" onsubmit="registrarPiloto(event)">
+                    <div class="form-group">
+                        <label>ID Piloto</label>
+                        <input type="number" id="pil_id" required placeholder="Ej. 904">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" id="pil_nombre" required placeholder="Ej. Mario Gómez">
+                    </div>
+                    <div class="form-group">
+                        <label>Historial Educativo</label>
+                        <input type="text" id="pil_edu" placeholder="Ej. Diversificado - Perito Contador">
+                    </div>
+                    <div class="form-group">
+                        <label>Residencia</label>
+                        <input type="text" id="pil_res" placeholder="Ej. Zona 18, Guatemala">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono / Contacto</label>
+                        <input type="text" id="pil_com" placeholder="Ej. 5555-1234">
+                    </div>
+                    <div class="form-group">
+                        <label>Bus Asignado</label>
+                        <select id="pil_bus"></select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar Piloto</button>
+                </form>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Historial Educativo</th>
+                            <th>Residencia</th>
+                            <th>Contacto</th>
+                            <th>Unidad Asignada</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pilotos">
+                        <tr><td colspan="6" style="text-align:center;">Cargando lista de pilotos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 7. CONTROL DE AFORO Y DESPACHO DE REFUERZO (Req. 14 y 15) -->
+        <div id="modulo-alertas" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">🚨 Control de Aforo y Despacho de Refuerzos</h2>
+                <div class="filter-group" style="margin: 15px 0;">
+                    <label style="font-weight:600;">Filtrar Estaciones por Línea:</label>
+                    <select id="select-aforo-linea" class="filter-input" onchange="cargarControlAforo()">
+                        <option value="todas">-- Todas las Líneas --</option>
+                    </select>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Estación</th>
+                            <th>Línea</th>
+                            <th>Aforo Pasajeros</th>
+                            <th>Capacidad Estación</th>
+                            <th>% Aforo</th>
+                            <th>Estado de Alertas</th>
+                            <th>Acción de Operador (Req. 14)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-aforo">
+                        <tr><td colspan="7" style="text-align:center;">Cargando aforos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 8. ARQUITECTURA DE RED PARA PCs DE ESTACIÓN (Req. 17) -->
+        <div id="modulo-red" class="tab-content">
+            <div class="card">
+                <h2 class="card-title" style="color:#0f69c9;">🖥️ Propuesta de Arquitectura de Red y Conexión entre Estaciones (Req. 17)</h2>
+                <div style="line-height: 1.6; color: #444; font-size: 14px; margin-top: 15px;">
+                    <p>Para interconectar las <strong>computadoras de trabajo operadas en cada estación</strong> con la base de datos central en Oracle XE, se propone la siguiente arquitectura estándar y segura:</p>
+                    <ul>
+                        <li><strong>Red Privada Virtual (VPN IPSec / WireGuard):</strong> Cada PC de estación se conecta de forma cifrada a la red de la Municipalidad de Guatemala.</li>
+                        <li><strong>Arquitectura Cliente-Servidor REST API (Node.js):</strong> Las PCs ejecutan este cliente web interactuando mediante peticiones JSON seguras (HTTPS).</li>
+                        <li><strong>Mapeo de Fallo Off-line:</strong> En caso de pérdida temporal de conectividad en una estación, el navegador guarda en almacenamiento local (`LocalStorage`) el registro del operador y sincroniza con Oracle al restablecer el enlace.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. REPORTES -->
+        <div id="modulo-reportes" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2 class="card-title" style="margin: 0;">📊 Reportes Operativos Oficiales</h2>
+                    <div class="filter-group">
+                        <label style="font-weight:600;">Filtrar Línea:</label>
+                        <select id="rep_linea" class="filter-input" onchange="generarReporteDinamico()">
+                            <option value="todas">-- Todas las Líneas --</option>
+                        </select>
+                        <button class="btn btn-success" onclick="descargarReporteOficialPDF()">📥 Descargar Reporte en PDF</button>
+                    </div>
+                </div>
+
+                <div id="area-reporte-pdf" style="padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2 style="color: #022047; margin: 0;">REPORTE OFICIAL TRANSMETRO</h2>
+                        <p style="color: #666; margin: 5px 0 0 0; font-size: 13px;">Consolidado de Estaciones, Distancias, Operadores y Estado de Flota - Oracle XE Database</p>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Línea</th>
+                                <th>Orden</th>
+                                <th>Estación</th>
+                                <th>Dist. Sig. Estación</th>
+                                <th>Operador PC</th>
+                                <th>Municipalidad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-reporte-dinamico">
+                            <tr><td colspan="6" style="text-align:center;">Generando reporte...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let cronometros = {};
+
+        function verModulo(idModulo, boton) {
+            document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(idModulo).classList.add('active');
+            boton.classList.add('active');
+
+            if (idModulo === 'modulo-estaciones') { cargarEstaciones(); cargarTodasLasEstacionesSelects(); }
+            if (idModulo === 'modulo-muni') cargarMunicipalidades();
+            if (idModulo === 'modulo-accesos') { cargarLineasAccesosSelect(); cargarTodasLasEstacionesSelects(); }
+            if (idModulo === 'modulo-buses') { cargarBuses(); cargarVerificacionReglaBuses(); cargarParqueosSelects(); cargarBusesSelect(); }
+            if (idModulo === 'modulo-personal') { cargarPilotos(); cargarBusesSelect(); }
+            if (idModulo === 'modulo-alertas') cargarControlAforo();
+            if (idModulo === 'modulo-estado-linea') cargarMonitorGPS();
+            if (idModulo === 'modulo-reportes') generarReporteDinamico();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarCombosGlobales();
+            await cargarEstaciones();
+            setInterval(actualizarCronometrosEnPantalla, 1000);
+        });
+
+        async function cargarCombosGlobales() {
+            await cargarLineas();
+            await cargarMunicipalidades();
+            await cargarParqueosSelects();
+            await cargarTodasLasEstacionesSelects();
+            await cargarBusesSelect();
+        }
+
+        async function cargarTodasLasEstacionesSelects() {
+            try {
+                const res = await fetch('/api/estaciones?id_linea=todas');
+                const estaciones = await res.json();
+                
+                const accEstSelect = document.getElementById('acc_estacion');
+                const assocEstSelect = document.getElementById('assoc_estacion');
+
+                if (accEstSelect) {
+                    accEstSelect.innerHTML = '<option value="" disabled selected>-- Selecciona Estación --</option>';
+                    estaciones.forEach(e => {
+                        accEstSelect.innerHTML += `<option value="${e.id_estacion}">#${e.id_estacion} - ${e.nombre} (${e.linea})</option>`;
+                    });
+                }
+
+                if (assocEstSelect) {
+                    assocEstSelect.innerHTML = '<option value="" disabled selected>-- Selecciona Estación --</option>';
+                    estaciones.forEach(e => {
+                        assocEstSelect.innerHTML += `<option value="${e.id_estacion}">#${e.id_estacion} - ${e.nombre}</option>`;
+                    });
+                }
+            } catch(e) { console.error("Error cargando estaciones select:", e); }
+        }
+
+        async function cargarParqueosSelects() {
+            try {
+                const res = await fetch('/api/parqueos');
+                const parqueos = await res.json();
+
+                const selEstParqueo = document.getElementById('select-parqueo-estacion');
+                const selBusParqueo = document.getElementById('bus_parqueo');
+                const selEditBusParqueo = document.getElementById('edit_bus_parqueo');
+
+                if (selEstParqueo) {
+                    selEstParqueo.innerHTML = '<option value="">-- Sin Parqueo --</option>';
+                    parqueos.forEach(p => { selEstParqueo.innerHTML += `<option value="${p.id_parqueo}">${p.nombre}</option>`; });
+                }
+                if (selBusParqueo) {
+                    selBusParqueo.innerHTML = '<option value="" disabled selected>-- Selecciona Parqueo --</option>';
+                    parqueos.forEach(p => { selBusParqueo.innerHTML += `<option value="${p.id_parqueo}">${p.nombre}</option>`; });
+                }
+                if (selEditBusParqueo) {
+                    selEditBusParqueo.innerHTML = '<option value="" disabled selected>-- Selecciona Parqueo --</option>';
+                    parqueos.forEach(p => { selEditBusParqueo.innerHTML += `<option value="${p.id_parqueo}">${p.nombre}</option>`; });
+                }
+            } catch(e) {}
+        }
+
+        function descargarReporteOficialPDF() {
+            const elemento = document.getElementById('area-reporte-pdf');
+            const opt = { margin: 10, filename: 'Reporte_Oficial_Transmetro.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
+            html2pdf().set(opt).from(elemento).save();
+        }
+
+        function exportarTablaEstacionesPDF() {
+            const elemento = document.getElementById('area-impresion-estaciones');
+            const opt = { margin: 10, filename: 'Listado_Estaciones_Transmetro.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
+            html2pdf().set(opt).from(elemento).save();
+        }
+
+        async function cargarMunicipalidades() {
+            try {
+                const res = await fetch('/api/municipalidades'); const munis = await res.json();
+                const selectForm = document.getElementById('select-muni-form');
+                if (selectForm) { selectForm.innerHTML = ''; munis.forEach(m => { selectForm.innerHTML += `<option value="${m.id_municipalidad}">${m.nombre}</option>`; }); }
+                const tbody = document.getElementById('tbody-municipalidades');
+                if (tbody) { tbody.innerHTML = ''; munis.forEach(m => { tbody.innerHTML += `<tr><td><strong>#${m.id_municipalidad}</strong></td><td>${m.nombre}</td></tr>`; }); }
+            } catch(e){}
+        }
+
+        async function cargarLineas() {
+            try {
+                const res = await fetch('/api/lineas'); const lineas = await res.json();
+                const selectForm = document.getElementById('select-linea-form');
+                const selectFiltro = document.getElementById('select-filtro-linea');
+                const selectEstado = document.getElementById('select-linea-estado');
+                const selectGPS = document.getElementById('select-gps-linea');
+                const selectAforo = document.getElementById('select-aforo-linea');
+                const selectBusLinea = document.getElementById('bus_linea');
+                const selectEditBusLinea = document.getElementById('edit_bus_linea');
+                const selectAssocLinea = document.getElementById('assoc_linea');
+                const selectRepLinea = document.getElementById('rep_linea');
+
+                selectForm.innerHTML = '<option value="" disabled selected>-- Selecciona Línea --</option>';
+                selectFiltro.innerHTML = '<option value="todas">-- Todas las Líneas --</option>';
+                selectEstado.innerHTML = '<option value="" disabled selected>-- Selecciona Línea --</option>';
+                selectGPS.innerHTML = '<option value="todas">-- Todas las Líneas --</option>';
+                selectAforo.innerHTML = '<option value="todas">-- Todas las Líneas --</option>';
+                selectBusLinea.innerHTML = '<option value="">-- Sin Línea (Disponible) --</option>';
+                if(selectEditBusLinea) selectEditBusLinea.innerHTML = '<option value="">-- Sin Línea (Disponible) --</option>';
+                if(selectAssocLinea) selectAssocLinea.innerHTML = '<option value="" disabled selected>-- Selecciona Línea --</option>';
+                selectRepLinea.innerHTML = '<option value="todas">-- Todas las Líneas --</option>';
+
+                const tbodyEstado = document.getElementById('tbody-lineas-estado'); tbodyEstado.innerHTML = '';
+
+                lineas.forEach(l => {
+                    const opt = `<option value="${l.id_linea}">${l.nombre}</option>`;
+                    selectForm.innerHTML += opt; selectFiltro.innerHTML += opt; selectEstado.innerHTML += opt;
+                    selectGPS.innerHTML += opt; selectAforo.innerHTML += opt; selectBusLinea.innerHTML += opt;
+                    if(selectEditBusLinea) selectEditBusLinea.innerHTML += opt;
+                    if(selectAssocLinea) selectAssocLinea.innerHTML += opt;
+                    selectRepLinea.innerHTML += opt;
+
+                    let badgeClass = 'badge-op';
+                    if (l.estado === 'En Mantenimiento') badgeClass = 'badge-mant';
+                    if (l.estado === 'Alta Congestión') badgeClass = 'badge-cong';
+                    if (l.estado === 'Suspendida') badgeClass = 'badge-susp';
+
+                    tbodyEstado.innerHTML += `<tr><td><strong>Línea ${l.id_linea}</strong></td><td>${l.nombre}</td><td>${l.municipalidad}</td><td>${l.total_estaciones} paradas</td><td><strong>${parseFloat(l.distancia_total_km||0).toFixed(2)} km</strong></td><td><span class="badge ${badgeClass}">${l.estado}</span></td></tr>`;
+                });
+            } catch (err) {}
+        }
+
+        async function cargarEstaciones() {
+            const idLinea = document.getElementById('select-filtro-linea').value;
+            const buscar = document.getElementById('buscar-estacion').value;
+
+            try {
+                const res = await fetch(`/api/estaciones?id_linea=${idLinea}&buscar=${encodeURIComponent(buscar)}`);
+                const data = await res.json();
+                const tbody = document.querySelector('#tabla-estaciones tbody');
+
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No se encontraron estaciones.</td></tr>';
+                    return;
+                }
+
+                data.forEach(fila => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td><strong>Parada #${fila.orden_visita}</strong></td><td>${fila.nombre}</td><td><span class="badge badge-linea">${fila.linea}</span></td><td>${fila.parqueo}</td><td><strong>${fila.distancia_siguiente_km} km</strong></td><td>${fila.operador_nombre}</td><td><button class="btn btn-danger" onclick="eliminarEstacion(${fila.id_estacion})">🗑️ Eliminar</button></td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {}
+        }
+
+        async function cargarMonitorGPS() {
+            const idLinea = document.getElementById('select-gps-linea').value;
+            try {
+                const res = await fetch(`/api/estaciones?id_linea=${idLinea}`); const estaciones = await res.json();
+                const tbody = document.getElementById('tbody-gps-estaciones'); tbody.innerHTML = '';
+
+                estaciones.slice(0, 15).forEach((e, idx) => {
+                    const busFicha = `TR-${1000 + (idx % 8)}`;
+                    const cargaPct = (idx % 4 === 0) ? 18 : 65;
+                    const esperaExtra = (cargaPct < 25);
+                    const tiempoSegundos = (idx % 5 + 2) * 60 + (esperaExtra ? 300 : 0);
+                    cronometros[e.id_estacion] = tiempoSegundos;
+
+                    tbody.innerHTML += `<tr><td><strong>Parada #${e.orden_visita}</strong></td><td>${e.nombre}</td><td><span class="badge badge-linea">${e.linea}</span></td><td><strong>${busFicha}</strong></td><td>${cargaPct}% Cap.</td><td><span class="timer-box" id="timer-${e.id_estacion}">Calculando...</span></td><td>${esperaExtra ? '<span class="badge badge-mant">⚠️ +5 min (Carga <25%)</span>' : '<span class="badge badge-op">En Ruta Normal</span>'}</td></tr>`;
+                });
+            } catch(err){}
+        }
+
+        function actualizarCronometrosEnPantalla() {
+            for (let idEst in cronometros) {
+                if (cronometros[idEst] > 0) cronometros[idEst]--;
+                else cronometros[idEst] = 180;
+                const min = Math.floor(cronometros[idEst] / 60); const seg = cronometros[idEst] % 60;
+                const el = document.getElementById(`timer-${idEst}`);
+                if (el) el.innerText = `⏱️ ${min.toString().padStart(2, '0')}:${seg.toString().padStart(2, '0')}`;
+            }
+        }
+
+        async function cargarControlAforo() {
+            const idLinea = document.getElementById('select-aforo-linea').value;
+            try {
+                const res = await fetch(`/api/estaciones?id_linea=${idLinea}`); const estaciones = await res.json();
+                const tbody = document.getElementById('tbody-aforo'); tbody.innerHTML = '';
+
+                estaciones.forEach(e => {
+                    const aforo = e.aforo_actual || 45; const max = e.capacidad_max || 100; const pct = Math.round((aforo / max) * 100);
+                    let badge = 'badge-op'; let estado = 'Normal'; let btnRefuerzo = '-';
+
+                    if (pct >= 150) {
+                        badge = 'badge-susp'; estado = '🚨 Sobredemanda (≥150%)';
+                        btnRefuerzo = `<button class="btn btn-warning" onclick="despacharRefuerzo(${e.id_estacion})">🚀 Despachar Bus</button>`;
+                    } else if (pct > 80) { estado = 'Afluencia Alta'; badge = 'badge-cong'; }
+
+                    tbody.innerHTML += `<tr><td><strong>${e.nombre}</strong></td><td>${e.linea}</td><td>${aforo} pas.</td><td>${max} pas.</td><td><strong>${pct}%</strong></td><td><span class="badge ${badge}">${estado}</span></td><td>${btnRefuerzo}</td></tr>`;
+                });
+            } catch(e){}
+        }
+
+        async function despacharRefuerzo(idEstacion) {
+            const res = await fetch(`/api/estaciones/${idEstacion}/despachar-refuerzo`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message || data.error);
+            cargarControlAforo();
+            cargarBuses();
+        }
+
+        async function asociarEstacionALinea(e) {
+            e.preventDefault();
+            const id_estacion = document.getElementById('assoc_estacion').value;
+            const id_linea = document.getElementById('assoc_linea').value;
+
+            const res = await fetch('/api/estaciones/asociar-linea', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_estacion, id_linea }) });
+            const data = await res.json();
+            if (res.ok) { alert(data.message); cargarEstaciones(); } else alert('Error: ' + data.error);
+        }
+
+        async function cargarBuses() {
+            try {
+                const res = await fetch('/api/buses'); const buses = await res.json();
+                const tbody = document.getElementById('tbody-buses');
+                tbody.innerHTML = '';
+
+                buses.forEach(b => {
+                    let badge = 'badge-op';
+                    if (b.estado === 'Averiado') badge = 'badge-susp';
+                    if (b.estado === 'Disponible') badge = 'badge-linea';
+
+                    tbody.innerHTML += `<tr><td><strong>#${b.id_bus}</strong></td><td>${b.placa}</td><td>${b.capacidad_maxima} pas.</td><td><strong>${b.carga_pasajeros_pct}%</strong></td><td>${b.parqueo}</td><td>${b.linea}</td><td><span class="badge ${badge}">${b.estado}</span></td></tr>`;
+                });
+            } catch(e){}
+        }
+
+        async function cargarBusesSelect() {
+            try {
+                const res = await fetch('/api/buses'); const buses = await res.json();
+                const pilBusSelect = document.getElementById('pil_bus');
+                const editBusSelect = document.getElementById('edit_bus_id');
+
+                if (pilBusSelect) {
+                    pilBusSelect.innerHTML = '<option value="">-- Sin Bus --</option>';
+                    buses.forEach(b => { pilBusSelect.innerHTML += `<option value="${b.id_bus}">#${b.id_bus} - ${b.placa} (${b.estado})</option>`; });
+                }
+
+                if (editBusSelect) {
+                    editBusSelect.innerHTML = '<option value="" disabled selected>-- Selecciona Bus --</option>';
+                    buses.forEach(b => { editBusSelect.innerHTML += `<option value="${b.id_bus}">#${b.id_bus} - ${b.placa} (${b.parqueo})</option>`; });
+                }
+            } catch(e){}
+        }
+
+        async function reasignarBusSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit_bus_id').value;
+            const id_parqueo = document.getElementById('edit_bus_parqueo').value;
+            const id_linea = document.getElementById('edit_bus_linea').value;
+
+            const res = await fetch(`/api/buses/${id}/reasignar`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_parqueo, id_linea }) });
+            const data = await res.json();
+            if (res.ok) { alert(data.message); cargarBuses(); cargarVerificacionReglaBuses(); }
+            else alert('Error: ' + data.error);
+        }
+
+        async function cargarVerificacionReglaBuses() {
+            try {
+                const res = await fetch('/api/lineas'); const lineas = await res.json();
+                const tbody = document.getElementById('tbody-regla-buses'); tbody.innerHTML = '';
+                lineas.forEach(l => {
+                    const N = l.total_estaciones; const asig = l.buses_asignados || 0;
+                    let badge = 'badge-op'; let estado = '✅ Cumple Regla';
+                    if (asig < N) { badge = 'badge-susp'; estado = '🔴 Falta Flota (<N)'; }
+                    else if (asig > N*2) { badge = 'badge-cong'; estado = '🟠 Sobrefrecuencia (>2N)'; }
+                    tbody.innerHTML += `<tr><td><strong>${l.nombre}</strong></td><td>${N} estaciones</td><td>${N} buses</td><td>${N*2} buses</td><td><strong>${asig} buses</strong></td><td><span class="badge ${badge}">${estado}</span></td></tr>`;
+                });
+            } catch(e){}
+        }
+
+        async function cargarPilotos() {
+            try {
+                const res = await fetch('/api/pilotos'); const pilotos = await res.json();
+                const tbody = document.getElementById('tbody-pilotos'); tbody.innerHTML = '';
+                pilotos.forEach(p => { tbody.innerHTML += `<tr><td><strong>#${p.id_piloto}</strong></td><td>${p.nombre}</td><td>${p.historial_educativo}</td><td>${p.residencia}</td><td>${p.comunicacion}</td><td><strong>${p.bus_asignado}</strong></td></tr>`; });
+            } catch(e){}
+        }
+
+        async function cargarLineasAccesosSelect() {
+            try {
+                const res = await fetch('/api/lineas'); const lineas = await res.json();
+                const select = document.getElementById('select-linea-accesos'); select.innerHTML = '<option value="">-- Selecciona Línea --</option>';
+                lineas.forEach(l => { select.innerHTML += `<option value="${l.id_linea}">${l.nombre}</option>`; });
+            }catch(e){}
+        }
+
+        async function consultarAccesosPorLinea() {
+            const idLinea = document.getElementById('select-linea-accesos').value; if(!idLinea) return;
+            try {
+                const res = await fetch(`/api/lineas/${idLinea}/accesos`); const accesos = await res.json();
+                const tbody = document.getElementById('tbody-accesos-linea'); tbody.innerHTML = '';
+                if(accesos.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay accesos registrados para esta línea.</td></tr>'; return; }
+                accesos.forEach(a => { tbody.innerHTML += `<tr><td><strong>#${a.id_acceso}</strong></td><td>${a.estacion}</td><td>${a.descripcion}</td><td><span class="badge badge-op">👮 ${a.guardia}</span></td></tr>`; });
+            } catch(e){}
+        }
+
+        async function generarReporteDinamico() {
+            const idLinea = document.getElementById('rep_linea').value;
+            try {
+                const res = await fetch(`/api/estaciones?id_linea=${idLinea}`); const estaciones = await res.json();
+                const tbody = document.getElementById('tbody-reporte-dinamico'); tbody.innerHTML = '';
+                estaciones.forEach(e => { tbody.innerHTML += `<tr><td><strong>${e.linea}</strong></td><td>Parada #${e.orden_visita}</td><td>${e.nombre}</td><td><strong>${e.distancia_siguiente_km} km</strong></td><td>${e.operador_nombre}</td><td>${e.municipalidad}</td></tr>`; });
+            } catch(e){}
+        }
+
+        function limpiarFiltros() { document.getElementById('buscar-estacion').value = ''; document.getElementById('select-filtro-linea').value = 'todas'; cargarEstaciones(); }
+
+        async function registrarMunicipalidad(e) { e.preventDefault(); const id_municipalidad = document.getElementById('muni_id').value; const nombre = document.getElementById('muni_nombre').value; const res = await fetch('/api/municipalidades', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_municipalidad, nombre }) }); const data = await res.json(); if(res.ok){ alert(data.message); cargarMunicipalidades(); } else alert(data.error); }
+
+        async function registrarEstacion(event) { event.preventDefault(); const id_estacion = document.getElementById('id_estacion').value; const nombre = document.getElementById('nombre').value; const direccion = document.getElementById('direccion').value; const id_linea = document.getElementById('select-linea-form').value; const id_municipalidad = document.getElementById('select-muni-form').value; const id_parqueo = document.getElementById('select-parqueo-estacion').value; const operador_nombre = document.getElementById('operador_nombre').value; const res = await fetch('/api/estaciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_estacion, nombre, direccion, id_linea, id_municipalidad, id_parqueo, operador_nombre }) }); const data = await res.json(); if (res.ok) { alert(data.message); document.getElementById('form-estacion').reset(); cargarEstaciones(); cargarTodasLasEstacionesSelects(); } else alert('Error: ' + data.error); }
+
+        async function actualizarEstadoLinea(event) { event.preventDefault(); const id_linea = document.getElementById('select-linea-estado').value; const estado = document.getElementById('nuevo-estado').value; const res = await fetch(`/api/lineas/${id_linea}/estado`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) }); const data = await res.json(); if (res.ok) { alert(data.message); await cargarLineas(); } else alert('Error: ' + data.error); }
+
+        async function registrarBus(e) { e.preventDefault(); const id_bus = document.getElementById('bus_id').value; const placa = document.getElementById('bus_placa').value; const capacidad_maxima = document.getElementById('bus_cap').value; const carga_pasajeros_pct = document.getElementById('bus_carga').value; const id_parqueo = document.getElementById('bus_parqueo').value; const id_linea = document.getElementById('bus_linea').value; const res = await fetch('/api/buses', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_bus, placa, capacidad_maxima, carga_pasajeros_pct, id_parqueo, id_linea }) }); const data = await res.json(); if(res.ok){ alert(data.message); cargarBuses(); cargarBusesSelect(); cargarVerificacionReglaBuses(); } else alert('Error: ' + data.error); }
+
+        async function registrarPiloto(e) { e.preventDefault(); const id_piloto = document.getElementById('pil_id').value; const nombre = document.getElementById('pil_nombre').value; const historial_educativo = document.getElementById('pil_edu').value; const residencia = document.getElementById('pil_res').value; const comunicacion = document.getElementById('pil_com').value; const id_bus = document.getElementById('pil_bus').value; const res = await fetch('/api/pilotos', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_piloto, nombre, historial_educativo, residencia, comunicacion, id_bus }) }); const data = await res.json(); if(res.ok){ alert(data.message); cargarPilotos(); } else alert('Error: ' + data.error); }
+
+        async function registrarAcceso(e) { e.preventDefault(); const id_acceso = document.getElementById('acc_id').value; const id_estacion = document.getElementById('acc_estacion').value; const descripcion = document.getElementById('acc_desc').value; const nombre_guardia = document.getElementById('acc_guardia').value; const res = await fetch('/api/accesos', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_acceso, id_estacion, descripcion, nombre_guardia }) }); const data = await res.json(); if(res.ok){ alert(data.message); consultarAccesosPorLinea(); } else alert('Error: ' + data.error); }
+
+        async function eliminarEstacion(id) { if (!confirm(`¿Deseas eliminar la estación #${id}?`)) return; const res = await fetch(`/api/estaciones/${id}`, { method: 'DELETE' }); const data = await res.json(); if (res.ok) { alert(data.message); cargarEstaciones(); cargarTodasLasEstacionesSelects(); } else alert('Error: ' + data.error); }
+    </script>
+</body>
+</html>

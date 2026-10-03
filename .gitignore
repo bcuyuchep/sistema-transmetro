@@ -1,0 +1,4 @@
+node_modules/
+oracleJdk-27/
+.env
+.vscode/

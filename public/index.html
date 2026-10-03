@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control Transmetro</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f6f9; }
+        h1 { color: #004085; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        button:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+    <h1>🚆 Sistema de Control - Red Transmetro</h1>
+    <p>Gestión de estaciones y consultas en tiempo real desde Oracle Database.</p>
+
+    <button onclick="cargarEstaciones()">Cargar Estaciones desde Oracle</button>
+
+    <table id="tabla-estaciones">
+        <thead>
+            <tr>
+                <th>ID Estación</th>
+                <th>Nombre de Estación</th>
+                <th>Municipalidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="3">Haz clic en el botón para consultar los datos de la base de datos.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        async function cargarEstaciones() {
+            try {
+                const res = await fetch('/api/estaciones');
+                const data = await res.json();
+                
+                const tbody = document.querySelector('#tabla-estaciones tbody');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No se encontraron registros.</td></tr>';
+                    return;
+                }
+
+                data.forEach(fila => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${fila[0]}</td><td>${fila[1]}</td><td>${fila[2]}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                alert('Error al cargar datos desde el servidor');
+            }
+        }
+    </script>
+</body>
+</html>
