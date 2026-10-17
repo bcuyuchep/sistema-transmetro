@@ -1,6 +1,6 @@
 -- =============================================================================
 -- SISTEMA DE CONTROL DE TRANSMETRO Y MUNICIPALIDADES ALEDAÑAS
--- SCRIPT COMPLETO ORACLE XE - CUMPLIMIENTO TOTAL DE LOS 17 REQUERIMIENTOS
+
 -- =============================================================================
 
 BEGIN EXECUTE IMMEDIATE 'DROP TABLE Piloto CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;

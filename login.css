@@ -1,0 +1,319 @@
+
+/* DISEÑO LOGIN TRANSMETRO */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f1f5f9;
+    color: #17365d;
+}
+
+/* ENCABEZADO */
+.encabezado {
+    background: #07366c;
+    color: white;
+    min-height: 75px;
+    padding: 15px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.marca, .logo-login {
+    font-size: 23px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.marca-t {
+    color: #28b463;
+}
+
+.encabezado-texto {
+    font-size: 13px;
+    color: #d9e8f7;
+}
+
+/* CONTENEDOR PRINCIPAL */
+.contenedor-login {
+    min-height: calc(100vh - 115px);
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+    gap: 35px;
+    padding: 35px 5%;
+    align-items: stretch;
+}
+
+/* IMAGEN DEL TRANSMETRO */
+.panel-imagen {
+    min-height: 540px;
+    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+
+    background-image:
+        linear-gradient(
+            to top,
+            rgba(0, 25, 55, 0.88),
+            rgba(0, 25, 55, 0.08) 75%
+        ),
+        url("/transmetro.png");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    display: flex;
+    align-items: flex-end;
+    padding: 38px;
+    box-shadow: 0 12px 30px rgba(0, 30, 70, 0.12);
+}
+
+.texto-imagen {
+    position: relative;
+    z-index: 1;
+}
+
+.texto-imagen h1 {
+    color: white;
+    font-size: clamp(27px, 3vw, 40px);
+    line-height: 1.15;
+    margin: 0 0 12px;
+    text-shadow: 0 2px 7px rgba(0,0,0,.4);
+}
+
+.texto-imagen p {
+    color: #e9f2fc;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.etiqueta-parada {
+    display: inline-block;
+    background: #07529a;
+    color: white;
+    border-left: 5px solid #28b463;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* FORMULARIO */
+.panel-formulario {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tarjeta-login {
+    width: 100%;
+    max-width: 450px;
+    background: white;
+    padding: 38px;
+    border-radius: 18px;
+    box-shadow: 0 12px 35px rgba(0, 30, 70, .10);
+}
+
+.logo-login {
+    color: #07366c;
+    font-size: 21px;
+}
+
+.subtitulo {
+    font-size: 12px;
+    color: #73849a;
+    margin: 5px 0 30px;
+}
+
+.tarjeta-login h2 {
+    font-size: 27px;
+    color: #07366c;
+    margin: 0 0 8px;
+}
+
+.descripcion {
+    color: #718096;
+    font-size: 14px;
+    margin-bottom: 26px;
+}
+
+#form-login label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 15px 0 7px;
+}
+
+#form-login input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+#form-login input:focus {
+    border-color: #0878c9;
+    box-shadow: 0 0 0 3px rgba(8,120,201,.12);
+}
+
+#boton-login {
+    width: 100%;
+    margin-top: 23px;
+    padding: 14px;
+    background: #073d7c;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+#boton-login:hover {
+    background: #0759a7;
+}
+
+#boton-login:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+#mensaje-error {
+    color: #c62828;
+    font-size: 13px;
+    min-height: 18px;
+    margin-top: 12px;
+}
+
+/* RECORRIDO ANIMADO */
+.recorrido {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.recorrido h4 {
+    font-size: 11px;
+    color: #60758e;
+    letter-spacing: 1px;
+    margin: 0 0 30px;
+}
+
+.ruta {
+    position: relative;
+    padding-top: 22px;
+}
+
+.linea {
+    height: 5px;
+    width: 100%;
+    background: #b9c9da;
+    border-radius: 5px;
+}
+
+.linea::before {
+    content: "";
+    display: block;
+    height: 100%;
+    background: #28b463;
+    transform-origin: left;
+    animation: avanzar-linea 12s linear infinite;
+}
+
+.bus-animado {
+    position: absolute;
+    top: -5px;
+    left: 0;
+    width: 54px;
+    z-index: 2;
+    animation: mover-transmetro 12s linear infinite;
+}
+
+.bus-animado svg {
+    display: block;
+    width: 100%;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.25));
+}
+
+.paradas {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    margin-top: 14px;
+}
+
+.paradas span {
+    flex: 1;
+    font-size: 10px;
+    color: #526781;
+    text-align: center;
+}
+
+@keyframes mover-transmetro {
+    0%, 8% { left: 0%; }
+    30%, 38% { left: 28%; }
+    60%, 68% { left: 60%; }
+    90%, 100% { left: calc(100% - 54px); }
+}
+
+@keyframes avanzar-linea {
+    0%, 8% { transform: scaleX(0); }
+    30%, 38% { transform: scaleX(.33); }
+    60%, 68% { transform: scaleX(.66); }
+    90%, 100% { transform: scaleX(1); }
+}
+
+/* PIE DE PÁGINA */
+footer {
+    text-align: center;
+    color: #75869a;
+    font-size: 12px;
+    padding: 14px;
+}
+
+/* PANTALLAS PEQUEÑAS */
+@media (max-width: 900px) {
+    .contenedor-login {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+    .panel-imagen {
+        min-height: 300px;
+    }
+
+    .tarjeta-login {
+        max-width: 550px;
+    }
+
+    .encabezado-texto {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .tarjeta-login {
+        padding: 24px;
+    }
+
+    .panel-imagen {
+        padding: 22px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bus-animado,
+    .linea::before {
+        animation: none;
+    }
+}

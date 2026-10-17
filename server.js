@@ -3,17 +3,48 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
+const session = require('express-session');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static(__dirname));
+
+// Archivos públicos del login
+app.get('/login.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.css'));
+});
+
+app.get('/login.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.js'));
+});
+
+app.get('/transmetro.png', (req, res) => {
+    res.sendFile(path.join(__dirname, 'transmetro.png'));
+});
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+    ssl: process.env.DATABASE_URL
+        ? { rejectUnauthorized: false }
+        : false
 });
+
+app.set('trust proxy', 1);
+
+app.use(session({
+    name: 'transmetro.sid',
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 2 * 60 * 60 * 1000
+    }
+}));
 
 function normalizarFilas(rows) {
     if (!rows || !Array.isArray(rows)) return [];
@@ -229,6 +260,98 @@ async function autoInicializarBD() {
         if (client) client.release();
     }
 }
+
+
+app.get('/login', (req, res) => {
+    if (req.session?.administrador) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/api/session', (req, res) => {
+    res.json({
+        autenticado: Boolean(req.session?.administrador)
+    });
+});
+
+app.post('/api/login', (req, res) => {
+    const { usuario, password } = req.body || {};
+
+    if (!process.env.ADMIN_PASSWORD) {
+        return res.status(503).json({
+            error: 'Contraseña del administrador no configurada.'
+        });
+    }
+
+    function compararSeguro(a, b) {
+        const x = crypto.createHash('sha256')
+            .update(String(a ?? '')).digest();
+        const y = crypto.createHash('sha256')
+            .update(String(b ?? '')).digest();
+
+        return crypto.timingSafeEqual(x, y);
+    }
+
+    if (
+        compararSeguro(usuario, 'admin') &&
+        compararSeguro(password, process.env.ADMIN_PASSWORD)
+    ) {
+        return req.session.regenerate(err => {
+            if (err) {
+                return res.status(500).json({
+                    error: 'Error al iniciar sesión.'
+                });
+            }
+
+            req.session.administrador = true;
+            req.session.save(err => {
+                if (err) {
+                    return res.status(500).json({
+                        error: 'No se pudo guardar la sesión.'
+                    });
+                }
+
+                res.json({
+                    message: 'Bienvenido al sistema Transmetro.'
+                });
+            });
+        });
+    }
+
+    res.status(401).json({
+        error: 'Usuario o contraseña incorrectos.'
+    });
+});
+
+app.post('/api/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).json({
+                error: 'No se pudo cerrar la sesión.'
+            });
+        }
+
+        res.clearCookie('transmetro.sid');
+        res.json({ message: 'Sesión cerrada.' });
+    });
+});
+
+// Proteger el sistema y sus API
+app.use((req, res, next) => {
+    if (req.session?.administrador) {
+        return next();
+    }
+
+    if (req.path.startsWith('/api/')) {
+        return res.status(401).json({
+            error: 'Debes iniciar sesión.'
+        });
+    }
+
+    res.redirect('/login');
+});
+
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
@@ -585,5 +708,5 @@ app.delete('/api/estaciones/:id', async (req, res) => {
 
 app.listen(PORT, async () => {
     console.log(`🚀 Servidor listo en http://localhost:${PORT}`);
-    await autoInicializarBD();
+ // await autoInicializarBD();
 });

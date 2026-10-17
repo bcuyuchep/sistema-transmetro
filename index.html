@@ -48,13 +48,48 @@
         .badge-susp { background-color: #dc3545; }
         .badge-cong { background-color: #fd7e14; }
         .timer-box { font-family: monospace; font-size: 15px; font-weight: bold; color: #d9534f; background: #fff3f3; padding: 4px 10px; border-radius: 6px; border: 1px solid #f5c6cb; }
-    </style>
+   
+#btnCerrarSesion {
+    position: absolute;
+    top: 18px;
+    right: 28px;
+    background-color: #ef4444;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+#btnCerrarSesion:hover {
+    background-color: #dc2626;
+}
+
+/* MOSTRAR NOMBRE COMPLETO DEL OPERADOR PC */
+#tabla-estaciones th:nth-child(6),
+#tabla-estaciones td:nth-child(6) {
+    min-width: 200px;
+    width: 220px;
+    max-width: none;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    line-height: 1.5;
+}
+
+   </style>
 </head>
 <body>
 
     <header>
         <h1> Sistema de Control de Transmetro y Municipalidades Aledañas</h1>
         <p>sistema de contro Municipalidad de Guatemala </p>
+        <button id="btnCerrarSesion" type="button" onclick="cerrarSesion()">
+     Cerrar sesión
+</button>
     </header>
 
     <nav class="nav-tabs">
@@ -106,7 +141,7 @@
                         <label>Municipalidad</label>
                         <select id="select-muni-form" required></select>
                     </div>
-                    <button type="submit" class="btn btn-success">Guardar en Oracle</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
                 </form>
             </div>
 
@@ -308,7 +343,7 @@
         <!-- 5. BUSES, PARQUEOS Y CUMPLIMIENTO N-2N  -->
         <div id="modulo-buses" class="tab-content">
             <div class="card">
-                <h2 class="card-title">🚌 Flota de Buses, Parqueos y Regla</h2>
+                <h2 class="card-title"> Flota de Buses, Parqueos y Regla</h2>
                 <form class="form-grid" style="margin-top:15px; margin-bottom: 25px;" onsubmit="registrarBus(event)">
                     <div class="form-group">
                         <label>ID Bus</label>
@@ -476,7 +511,7 @@
         <!-- 8. ARQUITECTURA DE RED PARA PCs DE ESTACIÓN (Req. 17) -->
         <div id="modulo-red" class="tab-content">
             <div class="card">
-                <h2 class="card-title" style="color:#0f69c9;">🖥️ Propuesta de Arquitectura de Red y Conexión entre Estaciones (Req. 17)</h2>
+                <h2 class="card-title" style="color:#0f69c9;">🖥️ Propuesta de Arquitectura de Red y Conexión entre Estaciones </h2>
                 <div style="line-height: 1.6; color: #444; font-size: 14px; margin-top: 15px;">
                     <p>Para interconectar las <strong>computadoras de trabajo operadas en cada estación</strong> con la base de datos central en Oracle XE, se propone la siguiente arquitectura estándar y segura:</p>
                     <ul>
@@ -490,9 +525,9 @@
 
         <!-- 9. REPORTES -->
         <div id="modulo-reportes" class="tab-content">
-            <div class="card">
+            <div class="card">  
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h2 class="card-title" style="margin: 0;">📊 Reportes Operativos Oficiales</h2>
+                    <h2 class="card-title" style="margin: 0;"> Reportes Operativos Oficiales</h2>
                     <div class="filter-group">
                         <label style="font-weight:600;">Filtrar Línea:</label>
                         <select id="rep_linea" class="filter-input" onchange="generarReporteDinamico()">
@@ -876,5 +911,30 @@
 
         async function eliminarEstacion(id) { if (!confirm(`¿Deseas eliminar la estación #${id}?`)) return; const res = await fetch(`/api/estaciones/${id}`, { method: 'DELETE' }); const data = await res.json(); if (res.ok) { alert(data.message); cargarEstaciones(); cargarTodasLasEstacionesSelects(); } else alert('Error: ' + data.error); }
     </script>
+
+<script>
+async function cerrarSesion() {
+    const confirmar = confirm('¿Deseas cerrar sesión?');
+
+    if (!confirmar) return;
+
+    try {
+        const respuesta = await fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'same-origin'
+        });
+
+        if (!respuesta.ok) {
+            throw new Error('No se pudo cerrar sesión');
+        }
+
+        window.location.replace('/login');
+
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        alert('No se pudo cerrar sesión.');
+    }
+}
+</script>
 </body>
 </html>
