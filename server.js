@@ -46,6 +46,46 @@ app.use(session({
     }
 }));
 
+// Archivos del panel Operador PC
+// Se permite cargarlos solamente con una sesión autorizada.
+
+app.get('/operador-panel.js', (req, res) => {
+console.log('SOLICITUD DE OPERADOR-PANEL.JS');
+console.log('ROL ACTUAL:', req.session?.rol);
+
+
+
+    if (req.session?.rol !== 'operador') return res.sendStatus(403);
+    res.type('application/javascript').sendFile(path.join(__dirname, 'operador-panel.js'));
+});
+
+app.get('/operador.css', (req, res) => {
+    if (!req.session?.administrador &&
+        req.session?.rol !== 'operador') {
+        return res.sendStatus(401);
+    }
+
+    res.sendFile(path.join(__dirname, 'operador.css'));
+});
+
+app.get('/operador.js', (req, res) => {
+    if (!req.session?.administrador &&
+        req.session?.rol !== 'operador') {
+        return res.sendStatus(401);
+    }
+
+    res.sendFile(path.join(__dirname, 'operador.js'));
+});
+
+app.get('/seguimiento_bus.js', (req, res) => {
+    if (!req.session?.administrador &&
+        req.session?.rol !== 'operador') {
+        return res.sendStatus(401);
+    }
+
+    res.sendFile(path.join(__dirname, 'seguimiento_bus.js'));
+});
+
 function normalizarFilas(rows) {
     if (!rows || !Array.isArray(rows)) return [];
     return rows.map(row => {
@@ -208,8 +248,8 @@ async function autoInicializarBD() {
         await client.query(`INSERT INTO Municipalidad VALUES (3, 'Municipalidad de Villa Nueva')`);
 
         const lineas = [[0, 'Transbordo', 1, 'Operativa'], [1, 'Línea 1', 1, 'Operativa'], [2, 'Línea 2', 1, 'Operativa'], [6, 'Línea 6', 1, 'Operativa'], [7, 'Línea 7', 1, 'Operativa'], [12, 'Línea 12', 3, 'Operativa'], [13, 'Línea 13', 1, 'Operativa'], [18, 'Línea 18', 1, 'Operativa'], [5, 'Ruta 5', 1, 'Operativa']];
-        for (const l of lineas) { 
-            await client.query(`INSERT INTO Linea VALUES ($1, $2, $3, $4)`, l); 
+        for (const l of lineas) {
+            await client.query(`INSERT INTO Linea VALUES ($1, $2, $3, $4)`, l);
         }
 
         await client.query(`INSERT INTO Parqueo VALUES (1, 'Parqueo Centra Sur', 'Zona 12 Villa Nueva')`);
@@ -218,7 +258,7 @@ async function autoInicializarBD() {
         let ordenPorLinea = {};
         for (const est of lista120Estaciones) {
             const [id_est, nom, dir, id_lin, id_mun] = est;
-            const aforo = Math.floor(Math.random() * 110) + 20; 
+            const aforo = Math.floor(Math.random() * 110) + 20;
             const opNom = `Op. ${nom.substring(0, 10)}`;
             const parqId = (id_est === 1218) ? 1 : null;
 
@@ -241,13 +281,13 @@ async function autoInicializarBD() {
         }
 
         const busesDemo = [[101, 'TR-1001', 160, 15, 1, 12, 'Operativo'], [102, 'TR-1002', 160, 80, 1, 12, 'Operativo'], [301, 'TR-3001', 120, 10, 2, null, 'Disponible']];
-        for (const b of busesDemo) { 
-            await client.query(`INSERT INTO Bus VALUES ($1, $2, $3, $4, $5, $6, $7)`, b); 
+        for (const b of busesDemo) {
+            await client.query(`INSERT INTO Bus VALUES ($1, $2, $3, $4, $5, $6, $7)`, b);
         }
 
         const pilotosDemo = [[901, 'Juan Pérez', 'Diversificado - Perito Contador', 'Zona 12, Villa Nueva', '5555-1234', 101]];
-        for (const p of pilotosDemo) { 
-            await client.query(`INSERT INTO Piloto VALUES ($1, $2, $3, $4, $5, $6)`, p); 
+        for (const p of pilotosDemo) {
+            await client.query(`INSERT INTO Piloto VALUES ($1, $2, $3, $4, $5, $6)`, p);
         }
 
         await client.query('COMMIT');
@@ -263,15 +303,47 @@ async function autoInicializarBD() {
 
 
 app.get('/login', (req, res) => {
+    if (req.session?.rol === 'operador') {
+        return res.redirect('/operador');
+    }
+
     if (req.session?.administrador) {
         return res.redirect('/');
     }
+
     res.sendFile(path.join(__dirname, 'login.html'));
 });
 
+
+app.get('/operador', (req, res) => {
+    const esOperador = req.session?.rol === 'operador';
+    const esAdministrador = req.session?.administrador === true;
+
+    if (!esOperador && !esAdministrador) {
+        return res.redirect('/login');
+    }
+
+    if (esOperador && !Number.isInteger(req.session.estacionId)) {
+        return res.status(403).send(
+            'El operador no tiene una estación válida asignada.'
+        );
+    }
+
+    return res.sendFile(path.join(__dirname, 'operador.html'));
+});
+
+
 app.get('/api/session', (req, res) => {
+    const rol = req.session?.rol === 'operador'
+        ? 'operador'
+        : req.session?.administrador
+            ? 'admin'
+            : null;
+
     res.json({
-        autenticado: Boolean(req.session?.administrador)
+        autenticado: Boolean(rol),
+        rol: rol,
+        redirect: rol === 'operador' ? '/operador' : '/'
     });
 });
 
@@ -291,6 +363,44 @@ app.post('/api/login', (req, res) => {
             .update(String(b ?? '')).digest();
 
         return crypto.timingSafeEqual(x, y);
+    }
+
+
+    const esOperador =
+        Boolean(process.env.OPERADOR_USER) &&
+        Boolean(process.env.OPERADOR_PASSWORD) &&
+        Boolean(process.env.OPERADOR_ESTACION_ID) &&
+        compararSeguro(usuario, process.env.OPERADOR_USER) &&
+        compararSeguro(password, process.env.OPERADOR_PASSWORD);
+
+    if (esOperador) {
+        return req.session.regenerate(err => {
+            if (err) {
+                return res.status(500).json({
+                    error: 'Error al iniciar sesión del operador.'
+                });
+            }
+
+            req.session.rol = 'operador';
+            req.session.administrador = false;
+            req.session.usuario = process.env.OPERADOR_USER;
+            req.session.estacionId =
+                Number(process.env.OPERADOR_ESTACION_ID);
+
+            req.session.save(err => {
+                if (err) {
+                    return res.status(500).json({
+                        error: 'Error al guardar la sesión.'
+                    });
+                }
+
+                return res.json({
+                    autenticado: true,
+                    rol: 'operador',
+                    redirect: '/operador'
+                });
+            });
+        });
     }
 
     if (
@@ -337,21 +447,260 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
-// Proteger el sistema y sus API
+
+// Resumen de la estación asignada al operador.
+app.get('/api/operador/resumen', async (req, res) => {
+  console.log('CONSULTA RESUMEN OPERADOR');
+    console.log('ROL:', req.session?.rol);
+   console.log('ESTACION SELECCIONADA:', req.query.id_estacion);
+
+    if (req.session?.rol !== 'operador') return res.status(403).json({error:'Acceso reservado al operador.'});
+ const id = Number(req.query.id_estacion);
+   if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).json({
+        error: 'Seleccione una estación válida.'
+    });
+}
+    try {
+        const estacion=await pool.query('SELECT id_estacion,nombre,direccion,aforo_actual,capacidad_max FROM Estacion WHERE id_estacion=$1',[id]);
+        if(!estacion.rows.length) return res.status(404).json({error:'La estación asignada no existe en PostgreSQL.'});
+        const lineas=await pool.query('SELECT DISTINCT l.id_linea,l.nombre FROM Ruta_Linea r JOIN Linea l ON l.id_linea=r.id_linea WHERE r.id_estacion=$1 ORDER BY l.nombre',[id]);
+        const buses=await pool.query('SELECT DISTINCT b.id_bus,b.placa,l.nombre AS linea FROM Bus b JOIN Linea l ON l.id_linea=b.id_linea JOIN Ruta_Linea r ON r.id_linea=l.id_linea WHERE r.id_estacion=$1 ORDER BY b.placa',[id]);
+const movimientos = await pool.query(
+    `SELECT
+        id_movimiento,
+        fecha,
+        tipo,
+        id_bus,
+        pasajeros,
+        detalle
+     FROM Movimiento_Operador
+     WHERE id_estacion = $1
+     ORDER BY fecha DESC, id_movimiento DESC`,
+    [id]
+);
+        return res.json({usuario:req.session.usuario,estacion:estacion.rows[0],lineas:lineas.rows,buses:buses.rows,movimientos:movimientos.rows});
+    }catch(e){console.error('Error resumen operador:',e);return res.status(500).json({error:'No se pudo consultar la información de la estación.'});}
+});
+
+// Consultar todas las estaciones para el operador PC
+app.get('/api/operador/estaciones', async (req, res) => {
+    console.log('ENTRÓ A CONSULTAR ESTACIONES');
+console.log('ROL:', req.session?.rol);
+console.log('RUTA:', req.path);
+    if (req.session?.rol !== 'operador') {
+        return res.status(403).json({
+            error: 'Acceso reservado al operador.'
+        });
+    }
+
+    try {
+        const resultado = await pool.query(`
+            SELECT id_estacion, nombre, direccion
+            FROM Estacion
+            ORDER BY nombre ASC
+        `);
+
+        return res.json(resultado.rows);
+
+    } catch (error) {
+        console.error('Error consultando estaciones:', error);
+
+        return res.status(500).json({
+            error: 'No se pudieron consultar las estaciones.'
+        });
+    }
+});
+
+ // Proteger el sistema y sus API
 app.use((req, res, next) => {
-    if (req.session?.administrador) {
+    const esAdmin = req.session?.administrador === true;
+    const esOperador = req.session?.rol === 'operador';
+
+    // El administrador conserva sus permisos actuales.
+    if (esAdmin) {
         return next();
     }
 
+    // El operador solo puede acceder a las API autorizadas.
+    if (esOperador) {
+        const rutasConsulta = [
+            '/api/lineas',
+            '/api/estaciones',
+            '/api/buses',
+            '/api/municipalidades',
+            '/api/pilotos',
+            '/api/parqueos',
+            '/api/accesos',
+            '/api/guardias'
+        ];
+
+        if (
+            req.method === 'GET' &&
+            (rutasConsulta.includes(req.path) || /^\/api\/lineas\/\d+\/accesos$/.test(req.path))
+        ) {
+            return next();
+        }
+
+        // Las rutas operativas tendrán validaciones propias.
+    // Rutas permitidas para el operador
+const rutasOperador = [
+    '/api/operador/resumen',
+    '/api/operador/estaciones',
+    '/api/operador/movimientos',
+    '/api/operador/alertas'
+
+];
+
+if (
+    rutasOperador.includes(req.path) &&
+    ['GET', 'POST'].includes(req.method)
+) {
+    return next();
+}
+
+        if (req.path.startsWith('/api/')) {
+            return res.status(403).json({
+                error: 'El operador no tiene permiso para esta acción.'
+            });
+        }
+
+        // Impedir que el operador abra el panel administrativo.
+        return res.redirect('/operador');
+    }
+
+    // Usuarios sin sesión.
     if (req.path.startsWith('/api/')) {
         return res.status(401).json({
             error: 'Debes iniciar sesión.'
         });
     }
 
-    res.redirect('/login');
+    return res.redirect('/login');
 });
 
+
+
+async function crearTablaMovimientos() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS Movimiento_Operador (
+            id_movimiento BIGSERIAL PRIMARY KEY,
+            id_estacion INTEGER NOT NULL
+                REFERENCES Estacion(id_estacion),
+            usuario VARCHAR(100) NOT NULL,
+            tipo VARCHAR(30) NOT NULL
+                CHECK (tipo IN (
+                    'LLEGADA',
+                    'SALIDA',
+                    'PASAJEROS',
+                    'ALERTA',
+                    'INCIDENCIA'
+                )),
+            id_bus INTEGER REFERENCES Bus(id_bus),
+            pasajeros INTEGER CHECK (pasajeros >= 0),
+            detalle VARCHAR(500) NOT NULL DEFAULT '',
+            fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    `);
+}
+
+app.post('/api/operador/movimientos', async (req, res) => {
+    const esOperador = req.session?.rol === 'operador';
+    const esAdmin = req.session?.administrador === true;
+
+    if (!esOperador && !esAdmin) {
+        return res.status(403).json({
+            error: 'No tienes permiso para registrar movimientos.'
+        });
+    }
+
+const { id_estacion, tipo, id_bus, pasajeros, detalle } = req.body || {};
+
+const estacionId = Number(id_estacion);
+
+const tiposValidos = [
+    'LLEGADA',
+    'SALIDA',
+    'PASAJEROS',
+    'ALERTA',
+    'INCIDENCIA'
+];
+
+const tipoNormalizado = String(tipo || '').toUpperCase();
+const busId = id_bus === '' || id_bus == null
+    ? null
+    : Number(id_bus);
+
+const cantidad = pasajeros === '' || pasajeros == null
+    ? null
+    : Number(pasajeros);
+
+if (!Number.isSafeInteger(estacionId) || estacionId <= 0) {
+    return res.status(400).json({
+        error: 'Seleccione una estación válida.'
+    });
+}
+if (!tiposValidos.includes(tipoNormalizado)) {
+    return res.status(400).json({
+        error: 'Tipo de movimiento no válido.'
+    });
+}
+
+if (busId !== null &&
+    (!Number.isSafeInteger(busId) || busId <= 0)) {
+    return res.status(400).json({
+        error: 'El bus seleccionado no es válido.'
+    });
+}
+
+if (cantidad !== null &&
+    (!Number.isSafeInteger(cantidad) || cantidad < 0)) {
+    return res.status(400).json({
+        error: 'La cantidad de pasajeros no es válida.'
+    });
+}
+
+if (String(detalle || '').length > 500) {
+    return res.status(400).json({
+        error: 'El detalle no puede superar 500 caracteres.'
+    });
+}
+
+try {
+    const resultado = await pool.query(
+        `INSERT INTO Movimiento_Operador
+         (id_estacion, usuario, tipo, id_bus, pasajeros, detalle)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id_movimiento, fecha`,
+        [
+            estacionId,
+            String(req.session.usuario || 'admin'),
+            tipoNormalizado,
+            busId,
+            cantidad,
+            String(detalle || '')
+        ]
+    );
+
+    return res.status(201).json({
+        message: 'Movimiento registrado correctamente.',
+        movimiento: resultado.rows[0]
+    });
+
+} catch (error) {
+    console.error('========== ERROR POSTGRESQL ==========');
+    console.error('Mensaje:', error.message);
+    console.error('Código:', error.code);
+    console.error('Detalle:', error.detail);
+    console.error('Restricción:', error.constraint);
+    console.error('======================================');
+
+    return res.status(500).json({
+        error: 'No se pudo guardar el movimiento en PostgreSQL.'
+    });
+}
+
+});
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
@@ -360,16 +709,16 @@ app.get('/api/lineas', async (req, res) => {
     try {
         client = await pool.connect();
         const result = await client.query(`
-            SELECT 
-                l.id_linea AS id_linea, 
-                l.nombre AS nombre, 
-                COALESCE(l.estado, 'Operativa') AS estado, 
-                m.nombre AS municipalidad, 
-                (SELECT COUNT(*) FROM Ruta_Linea rl WHERE rl.id_linea = l.id_linea) AS total_estaciones, 
-                (SELECT COALESCE(SUM(distancia_siguiente_km), 0) FROM Ruta_Linea rl WHERE rl.id_linea = l.id_linea) AS distancia_total_km, 
-                (SELECT COUNT(*) FROM Bus b WHERE b.id_linea = l.id_linea) AS buses_asignados 
-            FROM Linea l 
-            JOIN Municipalidad m ON l.id_municipalidad = m.id_municipalidad 
+            SELECT
+                l.id_linea AS id_linea,
+                l.nombre AS nombre,
+                COALESCE(l.estado, 'Operativa') AS estado,
+                m.nombre AS municipalidad,
+                (SELECT COUNT(*) FROM Ruta_Linea rl WHERE rl.id_linea = l.id_linea) AS total_estaciones,
+                (SELECT COALESCE(SUM(distancia_siguiente_km), 0) FROM Ruta_Linea rl WHERE rl.id_linea = l.id_linea) AS distancia_total_km,
+                (SELECT COUNT(*) FROM Bus b WHERE b.id_linea = l.id_linea) AS buses_asignados
+            FROM Linea l
+            JOIN Municipalidad m ON l.id_municipalidad = m.id_municipalidad
             ORDER BY l.id_linea ASC
         `);
         res.json(normalizarFilas(result.rows));
@@ -394,36 +743,36 @@ app.get('/api/estaciones', async (req, res) => {
         const { id_linea, buscar } = req.query;
         client = await pool.connect();
         let query = `
-            SELECT 
-                e.id_estacion AS id_estacion, 
-                e.nombre AS nombre, 
-                COALESCE(e.direccion, 'Sin dirección') AS direccion, 
-                COALESCE(l.nombre, 'Sin Línea') AS linea, 
-                COALESCE(rl.id_linea, 0) AS id_linea, 
-                COALESCE(rl.orden_visita, 1) AS orden_visita, 
-                COALESCE(rl.distancia_siguiente_km, 0.8) AS distancia_siguiente_km, 
-                m.nombre AS municipalidad, 
-                COALESCE(p.nombre, 'Sin Parqueo') AS parqueo, 
-                COALESCE(e.aforo_actual, 30) AS aforo_actual, 
-                COALESCE(e.capacidad_max, 100) AS capacidad_max, 
-                COALESCE(e.operador_nombre, 'Operador Asignado') AS operador_nombre 
-            FROM Estacion e 
-            JOIN Municipalidad m ON e.id_municipalidad = m.id_municipalidad 
-            LEFT JOIN Parqueo p ON e.id_parqueo = p.id_parqueo 
-            LEFT JOIN Ruta_Linea rl ON e.id_estacion = rl.id_estacion 
-            LEFT JOIN Linea l ON rl.id_linea = l.id_linea 
+            SELECT
+                e.id_estacion AS id_estacion,
+                e.nombre AS nombre,
+                COALESCE(e.direccion, 'Sin dirección') AS direccion,
+                COALESCE(l.nombre, 'Sin Línea') AS linea,
+                COALESCE(rl.id_linea, 0) AS id_linea,
+                COALESCE(rl.orden_visita, 1) AS orden_visita,
+                COALESCE(rl.distancia_siguiente_km, 0.8) AS distancia_siguiente_km,
+                m.nombre AS municipalidad,
+                COALESCE(p.nombre, 'Sin Parqueo') AS parqueo,
+                COALESCE(e.aforo_actual, 30) AS aforo_actual,
+                COALESCE(e.capacidad_max, 100) AS capacidad_max,
+                COALESCE(e.operador_nombre, 'Operador Asignado') AS operador_nombre
+            FROM Estacion e
+            JOIN Municipalidad m ON e.id_municipalidad = m.id_municipalidad
+            LEFT JOIN Parqueo p ON e.id_parqueo = p.id_parqueo
+            LEFT JOIN Ruta_Linea rl ON e.id_estacion = rl.id_estacion
+            LEFT JOIN Linea l ON rl.id_linea = l.id_linea
             WHERE 1=1`;
-        
+
         let params = [];
-        if (id_linea && id_linea !== 'todas') { 
-            params.push(parseInt(id_linea)); 
-            query += ` AND rl.id_linea = $${params.length}`; 
+        if (id_linea && id_linea !== 'todas') {
+            params.push(parseInt(id_linea));
+            query += ` AND rl.id_linea = $${params.length}`;
         }
-        if (buscar && buscar.trim() !== '') { 
-            params.push(`%${buscar.trim()}%`); 
-            query += ` AND UPPER(e.nombre) LIKE UPPER($${params.length})`; 
+        if (buscar && buscar.trim() !== '') {
+            params.push(`%${buscar.trim()}%`);
+            query += ` AND UPPER(e.nombre) LIKE UPPER($${params.length})`;
         }
-        
+
         query += ` ORDER BY rl.orden_visita ASC, e.id_estacion ASC`;
         const result = await client.query(query, params);
         res.json(normalizarFilas(result.rows));
@@ -438,7 +787,7 @@ app.post('/api/estaciones/asociar-linea', async (req, res) => {
         const { id_estacion, id_linea } = req.body;
         client = await pool.connect();
         await client.query(`
-            INSERT INTO Ruta_Linea (id_linea, id_estacion, orden_visita, distancia_siguiente_km) 
+            INSERT INTO Ruta_Linea (id_linea, id_estacion, orden_visita, distancia_siguiente_km)
             VALUES ($1, $2, (SELECT COALESCE(MAX(orden_visita),0)+1 FROM Ruta_Linea WHERE id_linea = $1), 0.75)
         `, [parseInt(id_linea), parseInt(id_estacion)]);
         res.json({ message: `Estación #${id_estacion} vinculada exitosamente a la Línea ${id_linea}.` });
@@ -456,7 +805,7 @@ app.post('/api/estaciones/:id/despachar-refuerzo', async (req, res) => {
 
         const resEst = await client.query(`SELECT rl.id_linea FROM Ruta_Linea rl WHERE rl.id_estacion = $1`, [parseInt(id)]);
         const idLinea = resEst.rows.length > 0 ? resEst.rows[0].id_linea : 1;
-        
+
         const resBus = await client.query(`SELECT id_bus FROM Bus WHERE (estado = 'Disponible' OR id_linea IS NULL) LIMIT 1`);
         if (resBus.rows.length > 0) {
             const idBus = resBus.rows[0].id_bus;
@@ -467,9 +816,9 @@ app.post('/api/estaciones/:id/despachar-refuerzo', async (req, res) => {
         await client.query('COMMIT');
 
         res.json({ message: `🚀 Bus de refuerzo despachado a la estación #${id}. Aforo normalizado.` });
-    } catch (err) { 
+    } catch (err) {
         if (client) await client.query('ROLLBACK');
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
     finally { if (client) client.release(); }
 });
@@ -482,22 +831,22 @@ app.post('/api/estaciones', async (req, res) => {
         await client.query('BEGIN');
 
         await client.query(`
-            INSERT INTO Estacion (id_estacion, nombre, direccion, id_municipalidad, id_parqueo, aforo_actual, capacidad_max, operador_nombre) 
+            INSERT INTO Estacion (id_estacion, nombre, direccion, id_municipalidad, id_parqueo, aforo_actual, capacidad_max, operador_nombre)
             VALUES ($1, $2, $3, $4, $5, 30, 100, $6)
         `, [parseInt(id_estacion), nombre, direccion, parseInt(id_municipalidad || 1), id_parqueo ? parseInt(id_parqueo) : null, operador_nombre || 'Operador PC']);
-        
+
         if (id_linea) {
             await client.query(`
-                INSERT INTO Ruta_Linea (id_linea, id_estacion, orden_visita, distancia_siguiente_km) 
+                INSERT INTO Ruta_Linea (id_linea, id_estacion, orden_visita, distancia_siguiente_km)
                 VALUES ($1, $2, (SELECT COALESCE(MAX(orden_visita),0)+1 FROM Ruta_Linea WHERE id_linea = $1), 0.75)
             `, [parseInt(id_linea), parseInt(id_estacion)]);
         }
 
         await client.query('COMMIT');
         res.json({ message: 'Estación u Operador guardados con éxito.' });
-    } catch (err) { 
+    } catch (err) {
         if (client) await client.query('ROLLBACK');
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
     finally { if (client) client.release(); }
 });
@@ -508,7 +857,7 @@ app.post('/api/buses', async (req, res) => {
     try {
         const { id_bus, placa, capacidad_maxima, carga_pasajeros_pct, id_parqueo, id_linea, estado } = req.body;
         if (!id_parqueo) return res.status(400).json({ error: 'Un bus no puede quedar sin parqueo (Req. 7).' });
-        
+
         client = await pool.connect();
 
         if (id_linea) {
@@ -559,19 +908,19 @@ app.get('/api/buses', async (req, res) => {
     try {
         client = await pool.connect();
         const result = await client.query(`
-            SELECT 
-                b.id_bus AS id_bus, 
-                b.placa AS placa, 
-                b.capacidad_maxima AS capacidad_maxima, 
-                COALESCE(b.carga_pasajeros_pct, 50) AS carga_pasajeros_pct, 
-                p.id_parqueo AS id_parqueo, 
-                p.nombre AS parqueo, 
-                COALESCE(l.nombre, 'Disponible / Sin Línea') AS linea, 
-                COALESCE(b.id_linea, 0) AS id_linea, 
-                COALESCE(b.estado, 'Operativo') AS estado 
-            FROM Bus b 
-            JOIN Parqueo p ON b.id_parqueo = p.id_parqueo 
-            LEFT JOIN Linea l ON b.id_linea = l.id_linea 
+            SELECT
+                b.id_bus AS id_bus,
+                b.placa AS placa,
+                b.capacidad_maxima AS capacidad_maxima,
+                COALESCE(b.carga_pasajeros_pct, 50) AS carga_pasajeros_pct,
+                p.id_parqueo AS id_parqueo,
+                p.nombre AS parqueo,
+                COALESCE(l.nombre, 'Disponible / Sin Línea') AS linea,
+                COALESCE(b.id_linea, 0) AS id_linea,
+                COALESCE(b.estado, 'Operativo') AS estado
+            FROM Bus b
+            JOIN Parqueo p ON b.id_parqueo = p.id_parqueo
+            LEFT JOIN Linea l ON b.id_linea = l.id_linea
             ORDER BY b.id_bus ASC
         `);
         res.json(normalizarFilas(result.rows));
@@ -610,20 +959,79 @@ app.post('/api/municipalidades', async (req, res) => {
     finally { if (client) client.release(); }
 });
 
+// ELIMINAR MUNICIPALIDAD - SOLO ADMINISTRADOR
+app.delete('/api/municipalidades/:id', async (req, res) => {
+
+    // Verificar que el usuario sea Administrador
+    if (req.session?.administrador !== true) {
+        return res.status(403).json({
+            error: 'Acceso denegado. Solo el Administrador puede eliminar municipalidades.'
+        });
+    }
+
+    const id = Number(req.params.id);
+
+    // Validar el ID
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            error: 'El ID de la municipalidad no es válido.'
+        });
+    }
+
+    let client;
+
+    try {
+        client = await pool.connect();
+
+        const resultado = await client.query(
+            'DELETE FROM Municipalidad WHERE id_municipalidad = $1 RETURNING id_municipalidad',
+            [id]
+        );
+
+        if (resultado.rowCount === 0) {
+            return res.status(404).json({
+                error: 'La municipalidad no existe.'
+            });
+        }
+
+        return res.json({
+            message: 'Municipalidad eliminada correctamente.'
+        });
+
+    } catch (err) {
+
+        // Impedir eliminar municipalidades con registros relacionados
+        if (err.code === '23503') {
+            return res.status(409).json({
+                error: 'No se puede eliminar esta municipalidad porque tiene líneas, estaciones u otros registros relacionados.'
+            });
+        }
+
+        console.error('Error al eliminar municipalidad:', err);
+
+        return res.status(500).json({
+            error: 'Ocurrió un error al eliminar la municipalidad.'
+        });
+
+    } finally {
+        if (client) client.release();
+    }
+});
+
 app.get('/api/pilotos', async (req, res) => {
     let client;
     try {
         client = await pool.connect();
         const result = await client.query(`
-            SELECT 
-                p.id_piloto AS id_piloto, 
-                p.nombre AS nombre, 
-                COALESCE(p.historial_educativo, 'N/A') AS historial_educativo, 
-                COALESCE(p.residencia, 'N/A') AS residencia, 
-                COALESCE(p.comunicacion, 'N/A') AS comunicacion, 
-                COALESCE(b.placa, 'Sin Bus Asignado') AS bus_asignado 
-            FROM Piloto p 
-            LEFT JOIN Bus b ON p.id_bus = b.id_bus 
+            SELECT
+                p.id_piloto AS id_piloto,
+                p.nombre AS nombre,
+                COALESCE(p.historial_educativo, 'N/A') AS historial_educativo,
+                COALESCE(p.residencia, 'N/A') AS residencia,
+                COALESCE(p.comunicacion, 'N/A') AS comunicacion,
+                COALESCE(b.placa, 'Sin Bus Asignado') AS bus_asignado
+            FROM Piloto p
+            LEFT JOIN Bus b ON p.id_bus = b.id_bus
             ORDER BY p.id_piloto ASC
         `);
         res.json(normalizarFilas(result.rows));
@@ -648,16 +1056,16 @@ app.get('/api/lineas/:id/accesos', async (req, res) => {
         const { id } = req.params;
         client = await pool.connect();
         const result = await client.query(`
-            SELECT 
-                a.id_acceso AS id_acceso, 
-                a.descripcion AS descripcion, 
-                e.nombre AS estacion, 
-                COALESCE(g.nombre, 'Sin Guardia') AS guardia 
-            FROM Acceso a 
-            JOIN Estacion e ON a.id_estacion = e.id_estacion 
-            JOIN Ruta_Linea rl ON e.id_estacion = rl.id_estacion 
-            LEFT JOIN Guardia g ON a.id_acceso = g.id_acceso 
-            WHERE rl.id_linea = $1 
+            SELECT
+                a.id_acceso AS id_acceso,
+                a.descripcion AS descripcion,
+                e.nombre AS estacion,
+                COALESCE(g.nombre, 'Sin Guardia') AS guardia
+            FROM Acceso a
+            JOIN Estacion e ON a.id_estacion = e.id_estacion
+            JOIN Ruta_Linea rl ON e.id_estacion = rl.id_estacion
+            LEFT JOIN Guardia g ON a.id_acceso = g.id_acceso
+            WHERE rl.id_linea = $1
             ORDER BY e.nombre ASC
         `, [parseInt(id)]);
         res.json(normalizarFilas(result.rows));
@@ -680,9 +1088,9 @@ app.post('/api/accesos', async (req, res) => {
 
         await client.query('COMMIT');
         res.json({ message: 'Acceso y Guardia por acceso asignados.' });
-    } catch (err) { 
+    } catch (err) {
         if (client) await client.query('ROLLBACK');
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
     finally { if (client) client.release(); }
 });
@@ -699,14 +1107,24 @@ app.delete('/api/estaciones/:id', async (req, res) => {
 
         await client.query('COMMIT');
         res.json({ message: 'Estación eliminada correctamente.' });
-    } catch (err) { 
+    } catch (err) {
         if (client) await client.query('ROLLBACK');
-        res.status(500).json({ error: err.message }); 
+        res.status(500).json({ error: err.message });
     }
     finally { if (client) client.release(); }
 });
 
+
 app.listen(PORT, async () => {
     console.log(`🚀 Servidor listo en http://localhost:${PORT}`);
- // await autoInicializarBD();
+
+    try {
+        await crearTablaMovimientos();
+        console.log('Tabla de movimientos verificada correctamente.');
+    } catch (error) {
+        console.error('Error al preparar movimientos:', error.message);
+    }
+
+    // No activar sin revisar su contenido:
+    // await autoInicializarBD();
 });

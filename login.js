@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const datos = await respuesta.json();
 
 if (respuesta.ok && datos.autenticado === true) {
-    window.location.replace('/');
+    window.location.replace(datos.redirect || '/');
 }
 
           
@@ -53,7 +53,7 @@ if (respuesta.ok && datos.autenticado === true) {
             const datos = await respuesta.json();
 
             if (respuesta.ok) {
-                window.location.replace('/');
+                window.location.replace(datos.redirect || '/');
             } else {
                 mensaje.textContent =
                     datos.error || 'Usuario o contraseña incorrectos';

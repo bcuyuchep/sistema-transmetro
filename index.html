@@ -48,7 +48,7 @@
         .badge-susp { background-color: #dc3545; }
         .badge-cong { background-color: #fd7e14; }
         .timer-box { font-family: monospace; font-size: 15px; font-weight: bold; color: #d9534f; background: #fff3f3; padding: 4px 10px; border-radius: 6px; border: 1px solid #f5c6cb; }
-   
+
 #btnCerrarSesion {
     position: absolute;
     top: 18px;
@@ -105,7 +105,7 @@
     </nav>
 
     <div class="container">
-        
+
         <!-- 1. ESTACIONES -->
         <div id="modulo-estaciones" class="tab-content active">
             <div class="card">
@@ -145,7 +145,7 @@
                 </form>
             </div>
 
-           
+
             <div class="card">
                 <h2 class="card-title" style="color: #0f0f0f;"> Vincular Estación Existente a otra Línea </h2>
                 <form class="form-grid" style="margin-top:15px;" onsubmit="asociarEstacionALinea(event)">
@@ -277,16 +277,39 @@
                     </div>
                     <button type="submit" class="btn btn-success">Guardar en Oracle</button>
                 </form>
+<!-- BUSCAR MUNICIPALIDADES -->
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+    <input
+        type="text"
+        id="buscar-municipalidad"
+        placeholder="Buscar municipalidad por ID o nombre"
+        style="flex:1; padding:12px;"
+    >
 
+    <button
+        type="button"
+        class="btn"
+        onclick="buscarMunicipalidad()">
+        🔍 Buscar
+    </button>
+
+    <button
+        type="button"
+        class="btn"
+        onclick="limpiarBusquedaMunicipalidad()">
+        Mostrar todas
+    </button>
+</div>
                 <table>
                     <thead>
                         <tr>
                             <th>ID Municipalidad</th>
                             <th>Nombre</th>
+                            <th>Acción</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-municipalidades">
-                        <tr><td colspan="2" style="text-align:center;">Cargando municipalidades...</td></tr>
+                     <tr><td colspan="3" style="text-align:center;">Cargando municipalidades...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -396,9 +419,9 @@
                     <thead>
                         <tr>
                             <th>Línea</th>
-                            <th>Total Estaciones ($N$)</th>
-                            <th>Mínimo Requerido ($N$)</th>
-                            <th>Máximo Permitido ($2N$)</th>
+                            <th>Total Estaciones ()</th>
+                            <th>Mínimo Requerido ()</th>
+                            <th>Máximo Permitido (2N)</th>
                             <th>Buses Asignados</th>
                             <th>Estado Regla</th>
                         </tr>
@@ -447,6 +470,8 @@
                     </div>
                     <div class="form-group">
                         <label>Residencia</label>
+
+
                         <input type="text" id="pil_res" placeholder="Ej. Zona 18, Guatemala">
                     </div>
                     <div class="form-group">
@@ -525,7 +550,7 @@
 
         <!-- 9. REPORTES -->
         <div id="modulo-reportes" class="tab-content">
-            <div class="card">  
+            <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <h2 class="card-title" style="margin: 0;"> Reportes Operativos Oficiales</h2>
                     <div class="filter-group">
@@ -601,7 +626,7 @@
             try {
                 const res = await fetch('/api/estaciones?id_linea=todas');
                 const estaciones = await res.json();
-                
+
                 const accEstSelect = document.getElementById('acc_estacion');
                 const assocEstSelect = document.getElementById('assoc_estacion');
 
@@ -657,15 +682,119 @@
             html2pdf().set(opt).from(elemento).save();
         }
 
-        async function cargarMunicipalidades() {
-            try {
-                const res = await fetch('/api/municipalidades'); const munis = await res.json();
-                const selectForm = document.getElementById('select-muni-form');
-                if (selectForm) { selectForm.innerHTML = ''; munis.forEach(m => { selectForm.innerHTML += `<option value="${m.id_municipalidad}">${m.nombre}</option>`; }); }
-                const tbody = document.getElementById('tbody-municipalidades');
-                if (tbody) { tbody.innerHTML = ''; munis.forEach(m => { tbody.innerHTML += `<tr><td><strong>#${m.id_municipalidad}</strong></td><td>${m.nombre}</td></tr>`; }); }
-            } catch(e){}
+let listaMunicipalidades = [];
+
+async function cargarMunicipalidades() {
+    try {
+        const res = await fetch('/api/municipalidades');
+        if (!res.ok) throw new Error('Error al consultar municipalidades');
+
+        const munis = await res.json();
+        listaMunicipalidades = munis;
+
+        const selectForm = document.getElementById('select-muni-form');
+
+        if (selectForm) {
+            selectForm.innerHTML = '';
+
+            munis.forEach(m => {
+                const opcion = document.createElement('option');
+                opcion.value = m.id_municipalidad;
+                opcion.textContent = m.nombre;
+                selectForm.appendChild(opcion);
+            });
         }
+
+        mostrarMunicipalidades(munis);
+
+    } catch (error) {
+        console.error('Error al cargar municipalidades:', error);
+    }
+}
+
+function mostrarMunicipalidades(munis) {
+    const tbody = document.getElementById('tbody-municipalidades');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (munis.length === 0) {
+        tbody.innerHTML =
+            '<tr><td colspan="3">No se encontraron municipalidades.</td></tr>';
+        return;
+    }
+
+    munis.forEach(m => {
+        const fila = tbody.insertRow();
+
+        fila.insertCell().textContent = '#' + m.id_municipalidad;
+        fila.insertCell().textContent = m.nombre;
+
+        const accion = fila.insertCell();
+
+        const boton = document.createElement('button');
+        boton.type = 'button';
+        boton.textContent = 'Eliminar';
+        boton.className = 'btn';
+        boton.style.backgroundColor = '#dc3545';
+        boton.style.color = 'white';
+
+        boton.onclick = () => eliminarMunicipalidad(
+            m.id_municipalidad,
+            m.nombre
+        );
+
+        accion.appendChild(boton);
+    });
+}
+
+function buscarMunicipalidad() {
+    const texto = document.getElementById('buscar-municipalidad')
+        .value.trim().toLowerCase();
+
+    const filtradas = listaMunicipalidades.filter(m =>
+        String(m.id_municipalidad) === texto ||
+        m.nombre.toLowerCase().includes(texto)
+    );
+
+    mostrarMunicipalidades(filtradas);
+}
+
+function limpiarBusquedaMunicipalidad() {
+    document.getElementById('buscar-municipalidad').value = '';
+    mostrarMunicipalidades(listaMunicipalidades);
+}
+
+async function eliminarMunicipalidad(id, nombre) {
+    if (!confirm(`¿Deseas eliminar la municipalidad "${nombre}"?`)) {
+        return;
+    }
+
+
+    try {
+        const respuesta = await fetch(
+            `/api/municipalidades/${encodeURIComponent(id)}`,
+            {
+                method: 'DELETE',
+                credentials: 'same-origin'
+            }
+        );
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok) {
+            alert(resultado.error || 'No se pudo eliminar.');
+            return;
+        }
+
+        alert('Municipalidad eliminada correctamente.');
+        await cargarMunicipalidades();
+
+    } catch (error) {
+    console.error('ERROR AL ELIMINAR MUNICIPALIDAD:', error);
+    alert('Error al eliminar: ' + error.message);
+}
+}
 
         async function cargarLineas() {
             try {
@@ -852,9 +981,9 @@
                 const tbody = document.getElementById('tbody-regla-buses'); tbody.innerHTML = '';
                 lineas.forEach(l => {
                     const N = l.total_estaciones; const asig = l.buses_asignados || 0;
-                    let badge = 'badge-op'; let estado = '✅ Cumple Regla';
-                    if (asig < N) { badge = 'badge-susp'; estado = '🔴 Falta Flota (<N)'; }
-                    else if (asig > N*2) { badge = 'badge-cong'; estado = '🟠 Sobrefrecuencia (>2N)'; }
+                    let badge = 'badge-op'; let estado = ' Cumple Regla';
+                    if (asig < N) { badge = 'badge-susp'; estado = '🔴 Falta Flota '; }
+                    else if (asig > N*2) { badge = 'badge-cong'; estado = '🟠 Sobrefrecuencia '; }
                     tbody.innerHTML += `<tr><td><strong>${l.nombre}</strong></td><td>${N} estaciones</td><td>${N} buses</td><td>${N*2} buses</td><td><strong>${asig} buses</strong></td><td><span class="badge ${badge}">${estado}</span></td></tr>`;
                 });
             } catch(e){}
